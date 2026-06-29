@@ -1,19 +1,27 @@
-import { useState } from "react";
 import { useRouter } from "next/router";
 import type { AgentQuery } from "@/lib/types";
+import { useAgent } from "@/hooks/useAgent";
+import AgentProgress from "@/components/loading/AgentProgress";
 import QueryForm from "@/components/forms/QueryForm";
 
 export default function DiagnosePage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const { status, error, submit } = useAgent();
+  const isLoading = status === "loading";
 
   const handleSubmit = async (query: AgentQuery) => {
-    setLoading(true);
-    // Store query in sessionStorage so results.tsx can read it
-    sessionStorage.setItem("govihitha_query", JSON.stringify(query));
-    // Chunk 9 will wire up the real API call here; for now navigate to results
-    await router.push("/results");
+    const result = await submit(query);
+    if (result) {
+      sessionStorage.setItem("govihitha_result", JSON.stringify(result));
+      await router.push("/results");
+    }
   };
+
+  if (isLoading) {
+    return <AgentProgress />;
+  }
+
+  const hasError = status === "error";
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -24,7 +32,19 @@ export default function DiagnosePage() {
           Our AI will identify the disease and recommend action.
         </p>
       </div>
-      <QueryForm onSubmit={handleSubmit} loading={loading} />
+
+      {hasError && error && (
+        <div className="mb-6 flex gap-3 bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
+          <span className="text-lg shrink-0">⚠️</span>
+          <div>
+            <p className="font-semibold mb-0.5">Diagnosis failed</p>
+            <p>{error}</p>
+            <p className="mt-1 text-red-500">Please try again or check your connection.</p>
+          </div>
+        </div>
+      )}
+
+      <QueryForm onSubmit={handleSubmit} loading={false} />
     </div>
   );
 }
