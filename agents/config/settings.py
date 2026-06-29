@@ -13,6 +13,8 @@ class _Settings:
     GOOGLE_CLOUD_PROJECT: str = os.environ.get("GOOGLE_CLOUD_PROJECT", "researchbrain-497600")
     GOOGLE_CLOUD_REGION: str = os.environ.get("GOOGLE_CLOUD_REGION", "us-central1")
     GEMINI_MODEL: str = "gemini-2.0-flash"
+    DIAGNOSIS_TIMEOUT_SECONDS: int = 30
+    DIAGNOSIS_MAX_RETRIES: int = 3
 
 
 settings = _Settings()
