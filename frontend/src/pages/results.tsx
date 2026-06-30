@@ -5,9 +5,10 @@ import ActionPlanCard from "@/components/cards/ActionPlanCard";
 import DiagnosisCard from "@/components/cards/DiagnosisCard";
 import ResourceCard from "@/components/cards/ResourceCard";
 import WeatherCard from "@/components/cards/WeatherCard";
+import AgentProgress from "@/components/loading/AgentProgress";
 import Button from "@/components/common/Button";
 
-// Fallback shown only if sessionStorage has no result (e.g. direct URL visit)
+// Fallback shown when visiting /results directly without a diagnosis
 const SAMPLE: OrchestrationResult = {
   situation_summary:
     "Your rice crop in Colombo has been diagnosed with Rice Leaf Blast. Waterlogging risk (high) in 2 days will worsen the situation. Immediate action required.",
@@ -61,24 +62,34 @@ const SAMPLE: OrchestrationResult = {
   timeline: "7–10 days with treatment",
 };
 
+// undefined = not yet read from sessionStorage (SSR / first paint)
+// null     = sessionStorage empty — show demo
+// result   = real diagnosis data
+type ResultState = OrchestrationResult | null | undefined;
+
 export default function Results() {
-  const [result, setResult] = useState<OrchestrationResult | null>(null);
+  const [result, setResult] = useState<ResultState>(undefined);
 
   useEffect(() => {
     const stored = sessionStorage.getItem("govihitha_result");
     if (stored) {
       try {
-        setResult(JSON.parse(stored));
+        setResult(JSON.parse(stored) as OrchestrationResult);
       } catch {
-        setResult(SAMPLE);
+        setResult(null);
       }
     } else {
-      setResult(SAMPLE);
+      setResult(null);
     }
   }, []);
 
+  // Avoid flash of sample data before sessionStorage is read
+  if (result === undefined) {
+    return <AgentProgress />;
+  }
+
   const data = result ?? SAMPLE;
-  const isDemo = !result;
+  const isDemo = result === null;
 
   return (
     <div className="space-y-6 pb-8">
@@ -87,7 +98,9 @@ export default function Results() {
         <div>
           <h1 className="text-2xl font-bold text-green-900">Diagnosis Results</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            {isDemo ? "Showing sample results — submit a diagnosis to see real data" : "Based on your crop photo and symptoms"}
+            {isDemo
+              ? "Showing sample results — submit a diagnosis to see real data"
+              : "Based on your crop photo and symptoms"}
           </p>
         </div>
         <Link href="/diagnose">
@@ -98,24 +111,27 @@ export default function Results() {
       {isDemo && (
         <div className="flex gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
           <span className="text-lg shrink-0">💡</span>
-          <p>These are <strong>sample results</strong>. Go to <Link href="/diagnose" className="underline font-medium">Diagnose</Link> to analyse your own crop.</p>
+          <p>
+            These are <strong>sample results</strong>. Go to{" "}
+            <Link href="/diagnose" className="underline font-medium">
+              Diagnose
+            </Link>{" "}
+            to analyse your own crop.
+          </p>
         </div>
       )}
 
-      {/* Action plan — most urgent, shown first */}
       <ActionPlanCard
         steps={data.action_plan}
         situationSummary={data.situation_summary}
         timeline={data.timeline}
       />
 
-      {/* Diagnosis + Weather side by side on large screens */}
       <div className="grid lg:grid-cols-2 gap-6">
         <DiagnosisCard diagnosis={data.diagnosis} />
         <WeatherCard weather={data.weather} />
       </div>
 
-      {/* Resources — full width */}
       <ResourceCard resources={data.resources} />
     </div>
   );
