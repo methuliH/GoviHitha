@@ -2,7 +2,8 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 
 const navLinks = [
-  { href: "/", label: "Diagnose" },
+  { href: "/", label: "Home" },
+  { href: "/diagnose", label: "Diagnose" },
   { href: "/about", label: "About" },
 ];
 
