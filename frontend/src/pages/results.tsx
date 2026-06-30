@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { OrchestrationResult } from "@/lib/types";
 import ActionPlanCard from "@/components/cards/ActionPlanCard";
@@ -6,7 +7,7 @@ import ResourceCard from "@/components/cards/ResourceCard";
 import WeatherCard from "@/components/cards/WeatherCard";
 import Button from "@/components/common/Button";
 
-// Sample data used until Chunk 9 wires up the real API call
+// Fallback shown only if sessionStorage has no result (e.g. direct URL visit)
 const SAMPLE: OrchestrationResult = {
   situation_summary:
     "Your rice crop in Colombo has been diagnosed with Rice Leaf Blast. Waterlogging risk (high) in 2 days will worsen the situation. Immediate action required.",
@@ -14,15 +15,15 @@ const SAMPLE: OrchestrationResult = {
     disease_name: "Rice Leaf Blast",
     confidence: 0.92,
     description:
-      "Fungal infection caused by Magnaporthe oryzae, common in humid Sri Lankan rice-growing regions. Spreads rapidly in warm, humid conditions.",
+      "Fungal infection caused by Magnaporthe oryzae, common in humid Sri Lankan rice-growing regions.",
     treatment_steps: [
       "Apply Tricyclazole 75% WP fungicide at 0.6g per litre of water",
       "Improve field drainage to reduce standing water",
       "Remove and destroy infected plant material immediately",
     ],
     timeline: "7–10 days with consistent treatment",
-    prevention:
-      "Use blast-resistant varieties, avoid excess nitrogen fertiliser, rotate crops each season.",
+    prevention: "Use blast-resistant varieties, avoid excess nitrogen fertiliser.",
+    risk_level: "high",
   },
   weather: {
     current_weather: { temperature: 27.8, humidity: 82, rainfall_7d: 86.2 },
@@ -31,90 +32,91 @@ const SAMPLE: OrchestrationResult = {
         risk_type: "WATERLOGGING",
         likelihood: "high",
         days_ahead: 2,
-        context:
-          "Heavy rain forecast in 48h will accelerate fungal spread in waterlogged paddy fields.",
-        action:
-          "Improve field drainage immediately and apply fungicide before rain arrives.",
-      },
-      {
-        risk_type: "HIGH_HUMIDITY",
-        likelihood: "medium",
-        days_ahead: 0,
-        context:
-          "Current humidity of 82% exceeds the 80% threshold for rapid Magnaporthe oryzae spore germination.",
-        action: "Monitor closely and consider a preventive second application.",
+        context: "Heavy rain in 48h will accelerate fungal spread.",
+        action: "Improve drainage immediately and apply fungicide today.",
       },
     ],
-    forecast_summary:
-      "High humidity and heavy rain in 48h create high-risk conditions. Urgent drainage and fungicide action needed today.",
+    forecast_summary: "High humidity and incoming rain create high-risk conditions.",
   },
   resources: {
     recommendations: [
       {
         type: "fungicide",
         product_name: "Tricyclazole 75% WP",
-        why: "Directly targets Magnaporthe oryzae, the cause of Rice Leaf Blast.",
+        why: "Directly targets Magnaporthe oryzae.",
         availability: "Available at agri-supply shops in Colombo, Kandy, Galle.",
         estimated_cost: "1,200–2,500 LKR per 100g packet",
-        application_notes: "Mix 0.6g per litre of water. Apply every 7 days for 3 weeks.",
+        application_notes: "Mix 0.6g per litre. Apply every 7 days.",
         kapruka_search_link: "https://www.kapruka.com/search?q=Tricyclazole",
       },
-      {
-        type: "tool",
-        product_name: "Field drainage shovel",
-        why: "Address waterlogging risk before heavy rain arrives in 48h.",
-        availability: "Hardware shops islandwide.",
-        estimated_cost: "800–1,500 LKR",
-        application_notes: "Dig drainage channels along field borders before next rainfall.",
-        kapruka_search_link: "https://www.kapruka.com/search?q=drainage+shovel",
-      },
     ],
-    priority_note:
-      "Buy Tricyclazole TODAY and apply before rain. Start drainage work immediately.",
+    priority_note: "Buy Tricyclazole TODAY before the rain arrives.",
   },
   action_plan: [
-    "Buy Tricyclazole 75% WP today (1,200–2,500 LKR) — directly targets the diagnosed fungal infection",
-    "Apply Tricyclazole at 0.6g per litre of water across all affected areas",
-    "Improve field drainage immediately before heavy rain arrives in 48h",
-    "Remove and destroy all visibly infected plant material",
-    "Recheck your crop in 7–10 days to assess recovery",
+    "Buy Tricyclazole 75% WP today (1,200–2,500 LKR)",
+    "Apply fungicide at 0.6g per litre across all affected areas",
+    "Improve field drainage before rain in 48h",
+    "Recheck crop in 7–10 days to assess recovery",
   ],
   timeline: "7–10 days with treatment",
 };
 
 export default function Results() {
+  const [result, setResult] = useState<OrchestrationResult | null>(null);
+
+  useEffect(() => {
+    const stored = sessionStorage.getItem("govihitha_result");
+    if (stored) {
+      try {
+        setResult(JSON.parse(stored));
+      } catch {
+        setResult(SAMPLE);
+      }
+    } else {
+      setResult(SAMPLE);
+    }
+  }, []);
+
+  const data = result ?? SAMPLE;
+  const isDemo = !result;
+
   return (
     <div className="space-y-6 pb-8">
-      {/* Back + header */}
+      {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-green-900">Diagnosis Results</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Based on your crop photo and symptoms
+            {isDemo ? "Showing sample results — submit a diagnosis to see real data" : "Based on your crop photo and symptoms"}
           </p>
         </div>
         <Link href="/diagnose">
-          <Button variant="secondary" size="sm">
-            ← New diagnosis
-          </Button>
+          <Button variant="secondary" size="sm">← New diagnosis</Button>
         </Link>
       </div>
 
-      {/* Action plan — top, most important */}
+      {isDemo && (
+        <div className="flex gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+          <span className="text-lg shrink-0">💡</span>
+          <p>These are <strong>sample results</strong>. Go to <Link href="/diagnose" className="underline font-medium">Diagnose</Link> to analyse your own crop.</p>
+        </div>
+      )}
+
+      {/* Action plan — most urgent, shown first */}
       <ActionPlanCard
-        steps={SAMPLE.action_plan}
-        situationSummary={SAMPLE.situation_summary}
-        timeline={SAMPLE.timeline}
+        steps={data.action_plan}
+        situationSummary={data.situation_summary}
+        timeline={data.timeline}
       />
 
-      {/* Diagnosis + Weather side by side on larger screens */}
+      {/* Diagnosis + Weather side by side on large screens */}
       <div className="grid lg:grid-cols-2 gap-6">
-        <DiagnosisCard diagnosis={SAMPLE.diagnosis} />
-        <WeatherCard weather={SAMPLE.weather} />
+        <DiagnosisCard diagnosis={data.diagnosis} />
+        <WeatherCard weather={data.weather} />
       </div>
 
       {/* Resources — full width */}
-      <ResourceCard resources={SAMPLE.resources} />
+      <ResourceCard resources={data.resources} />
     </div>
   );
 }
