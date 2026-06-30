@@ -12,9 +12,24 @@ class _Settings:
     GOOGLE_API_KEY: str = os.environ.get("GOOGLE_API_KEY", "")
     GOOGLE_CLOUD_PROJECT: str = os.environ.get("GOOGLE_CLOUD_PROJECT", "researchbrain-497600")
     GOOGLE_CLOUD_REGION: str = os.environ.get("GOOGLE_CLOUD_REGION", "us-central1")
-    GEMINI_MODEL: str = "gemini-2.0-flash"
+    GEMINI_MODEL: str = "gemini-2.5-flash"
     DIAGNOSIS_TIMEOUT_SECONDS: int = 30
     DIAGNOSIS_MAX_RETRIES: int = 3
+
+    @property
+    def auth_mode(self) -> str:
+        return "api_key" if self.GOOGLE_API_KEY else "vertex_ai_adc"
+
+    def get_gemini_client(self):
+        from google import genai
+        if self.GOOGLE_API_KEY:
+            return genai.Client(api_key=self.GOOGLE_API_KEY)
+        # No API key — use Application Default Credentials via Vertex AI
+        return genai.Client(
+            vertexai=True,
+            project=self.GOOGLE_CLOUD_PROJECT,
+            location=self.GOOGLE_CLOUD_REGION,
+        )
 
 
 settings = _Settings()

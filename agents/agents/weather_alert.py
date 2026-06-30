@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 
-from google import genai
 from google.genai.types import GenerateContentConfig
 
 from agents.config.constants import DEFAULT_COORDINATES, REGION_COORDINATES
@@ -88,8 +87,8 @@ class WeatherAlertAgent:
         )
 
         # 4. Call Gemini for risk contextualisation (with retry)
-        if not settings.GOOGLE_API_KEY:
-            logger.warning("No GOOGLE_API_KEY — returning weather-only result without AI alerts")
+        if not settings.GOOGLE_API_KEY and not settings.GOOGLE_CLOUD_PROJECT:
+            logger.warning("No Gemini auth configured — returning weather-only result without AI alerts")
             return WeatherResult(
                 current_weather=CurrentWeather(
                     temperature=raw_weather["current_temperature"],
@@ -154,7 +153,7 @@ class WeatherAlertAgent:
 
 
 def _call_gemini(user_prompt: str) -> str:
-    client = genai.Client(api_key=settings.GOOGLE_API_KEY)
+    client = settings.get_gemini_client()
     response = client.models.generate_content(
         model=settings.GEMINI_MODEL,
         contents=user_prompt,
