@@ -7,6 +7,7 @@ export interface DiagnosisResult {
   treatment_steps: string[];
   timeline: string;
   prevention: string;
+  risk_level?: "low" | "medium" | "high";
 }
 
 export interface WeatherAlert {
