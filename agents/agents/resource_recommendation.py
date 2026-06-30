@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 
-from google import genai
 from google.genai.types import GenerateContentConfig
 
 from agents.config.settings import settings
@@ -51,8 +50,8 @@ class ResourceRecommendationAgent:
             crop_type, region, diagnosis.disease_name,
         )
 
-        if not settings.GOOGLE_API_KEY:
-            return _fallback("GOOGLE_API_KEY not set.")
+        if not settings.GOOGLE_API_KEY and not settings.GOOGLE_CLOUD_PROJECT:
+            return _fallback("No Gemini auth configured (set GOOGLE_API_KEY or configure ADC).")
 
         # Build weather context summary
         alert_summary = (
@@ -99,7 +98,7 @@ class ResourceRecommendationAgent:
 
 
 def _call_gemini(user_prompt: str) -> str:
-    client = genai.Client(api_key=settings.GOOGLE_API_KEY)
+    client = settings.get_gemini_client()
     response = client.models.generate_content(
         model=settings.GEMINI_MODEL,
         contents=user_prompt,

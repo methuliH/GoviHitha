@@ -1,7 +1,6 @@
 """Gemini Vision wrapper for crop image analysis."""
 from __future__ import annotations
 
-from google import genai
 from google.genai.types import GenerateContentConfig, Part
 
 from agents.config.settings import settings
@@ -23,10 +22,7 @@ def call_gemini_vision(
         ValueError: if the API key is not configured.
         google.genai.errors.APIError: on API-level failures.
     """
-    if not settings.GOOGLE_API_KEY:
-        raise ValueError("GOOGLE_API_KEY is not set. Add it to your .env file.")
-
-    client = genai.Client(api_key=settings.GOOGLE_API_KEY)
+    client = settings.get_gemini_client()
 
     image_part = Part.from_bytes(data=image_bytes, mime_type=mime_type)
 
